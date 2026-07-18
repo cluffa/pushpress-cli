@@ -10,6 +10,11 @@ structured JSON to stdout by default, errors are structured JSON on stderr with
 a stable exit-code contract, and the whole capability surface is self-describing
 via `pp describe`.
 
+> **Built with AI.** This project — the code, tests, and documentation
+> (including the API map below) — was written with the assistance of AI
+> (Anthropic's Claude). Treat it as a starting point and verify behavior against
+> your own account before relying on it.
+>
 > **Unofficial.** This is an independent, community-built client. It is not
 > produced or endorsed by PushPress. The API is undocumented and may change
 > without notice. See [Legal & scope](#legal--scope).
@@ -162,6 +167,10 @@ This section is a from-scratch map of the API so you could rebuild this client
 (or a different one) without any of the reverse-engineering that produced it.
 Everything below was recovered from the public member apps and confirmed against
 a live account the author owns; no private or third-party data is included.
+
+> A fuller endpoint-map reference — auth flows, REST response skeletons, the
+> complete GraphQL operation table, and additional operations `pp` doesn't wrap —
+> lives in [`docs/API.md`](docs/API.md).
 
 ## The shape of it
 
