@@ -1,0 +1,19 @@
+[project]
+name = "pp-cli"
+version = "0.1.0"
+description = "Agent-first CLI for the PushPress Members API"
+requires-python = ">=3.9"
+dependencies = ["httpx>=0.27", "typer>=0.12", "rich>=13"]
+
+[project.scripts]
+pp = "pp.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8", "respx>=0.21"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pp"]
