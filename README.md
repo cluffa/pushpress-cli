@@ -19,6 +19,11 @@ via `pp describe`.
 > produced or endorsed by PushPress. The API is undocumented and may change
 > without notice. See [Legal & scope](#legal--scope).
 
+![pp usage demo](docs/demo.gif)
+
+<sub>Demo recorded against a local mock — the values shown ("Demo CrossFit", etc.)
+are fake.</sub>
+
 - [Install](#install)
 - [Authentication](#authentication)
 - [Output contract](#output-contract)
@@ -92,6 +97,9 @@ Passwords and tokens are never printed. A stored session is written to
 - **Errors** are structured JSON on stderr:
   `{"error", "code", "detail", "hint"}` (`detail`/`hint` omitted when N/A).
 
+`--human`, `--ndjson`, and `--fields` are **global** flags — place them before the
+command name: `pp --fields company,timezone gym`, not `pp gym --fields …`.
+
 ### Exit codes
 
 | Code | Meaning |
@@ -136,8 +144,8 @@ via `/v2/auth/verify`).
 ### Examples
 
 ```bash
-pp whoami --fields isValid
-pp gym --fields company,timezone
+pp --fields isValid whoami          # global flags go before the command
+pp --fields company,timezone gym
 pp schedule --date 2026-07-20
 pp workouts --date 2026-07-20
 pp scores --keyword "Fran"
