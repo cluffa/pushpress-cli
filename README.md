@@ -125,7 +125,8 @@ Run `pp describe` for the machine-readable capability catalog, or
 | `features` | Feature-flag map for the gym. |
 | `settings <type>` | Client settings (`core`, `train`, `pushpress-membersportal`). |
 | `schedule` | Class schedule for a date, or detail for one class. |
-| `workouts` | Class types, workout-of-the-day, workout parts, score history. |
+| `workouts` | Class types, workout-of-the-day, parts, score history. |
+| `wod` | Auto-discover class type and show today's WOD. |
 | `scores` | Workout leaderboard or personal score history. |
 | `benchmarks` | Benchmark categories, workouts, and history. |
 | `attendance` | Check-in / attendance stats (week/month/year/all-time). |

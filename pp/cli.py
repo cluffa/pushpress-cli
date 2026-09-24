@@ -178,6 +178,80 @@ def workouts(
         _emit(ctx, workoutapi.workout_types(c, d))
 
 
+# ── wod ───────────────────────────────────────────────────────────────────
+
+
+def _resolve_date(date: str | None, tomorrow: bool, yesterday: bool) -> str:
+    """Resolve a date string from --date, --tomorrow, --yesterday, or today."""
+    from datetime import date as dt, timedelta
+
+    if date:
+        return date
+    today = dt.today()
+    if tomorrow:
+        return (today + timedelta(days=1)).isoformat()
+    if yesterday:
+        return (today - timedelta(days=1)).isoformat()
+    return today.isoformat()
+
+
+def _render_wod(data):
+    """Human-readable WOD renderer."""
+    from datetime import datetime
+
+    wod = data.get("workout")
+    if not wod:
+        typer.echo("No WOD found for this date.")
+        return
+    title = wod.get("title", "WOD")
+    parts = wod.get("parts", [])
+    # Parse date for a nice header
+    date_str = data.get("date", "")
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        header = dt.strftime("%A, %B %d, %Y")
+    except (ValueError, TypeError):
+        header = date_str
+    typer.echo(f"\n\033[1m{title}\033[0m — {header}")
+    typer.echo(f"Class: {data.get('class_type_name', '')}\n")
+    for p in parts:
+        p_title = p.get("title", "")
+        p_desc = p.get("description", "")
+        p_score = p.get("scoreType", "")
+        if p_title:
+            typer.echo(f"\033[1m=== {p_title} ===\033[0m")
+        else:
+            typer.echo("\033[1m=== Workout ===\033[0m")
+        if p_desc:
+            typer.echo(p_desc + "\n")
+        if p_score and p_score != "No Score":
+            typer.echo(f"Score: {p_score}\n")
+
+
+@app.command()
+@command
+def wod(
+    ctx: typer.Context,
+    date: str = typer.Option(None, "--date", help="Date YYYY-MM-DD (default today)."),
+    tomorrow: bool = typer.Option(False, "--tomorrow", help="Tomorrow's WOD."),
+    yesterday: bool = typer.Option(False, "--yesterday", help="Yesterday's WOD."),
+):
+    """Auto-discover class type and show the WOD in human-readable form.
+
+    Finds the first class type with a workout posted and renders it with
+    all parts, descriptions, and score types. Defaults to today. Use
+    --tomorrow / --yesterday for relative dates, or --date for a specific
+    day. Combine with --human for clean output, or omit for JSON.
+    """
+    c = from_session()
+    d = _resolve_date(date, tomorrow, yesterday)
+    result = workoutapi.wod_auto(c, d)
+    _emit(ctx, result, human_renderer=_render_wod)
+
+
+# ── scores ────────────────────────────────────────────────────────────────
+
+
 @app.command()
 @command
 def scores(

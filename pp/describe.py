@@ -67,6 +67,11 @@ _CATALOG = [
               {"name": "--score-id", "required": False}, {"name": "--keyword", "required": False}],
      "endpoint": "POST /v2/graph/graphql (GetWorkoutTypes / GetWorkoutOfDay / GetWorkoutPart / GetWorkoutScores / UserScoreHistory)",
      "output": "workoutTypes[{name,uid,...}] or workoutOfDay{title,parts[{title,scoreType,...}]} or workoutPart{title,scoreType,...} or workoutGetScores{scores[{id,primaryScore,...}]} or scoreHistory[{title,primaryScore,...}]"},
+    {"command": "wod", "summary": "Auto-discover class type and show today's WOD.",
+     "args": [{"name": "--date", "required": False}, {"name": "--tomorrow", "required": False},
+              {"name": "--yesterday", "required": False}],
+     "endpoint": "POST /v2/graph/graphql (GetClassTypes + GetWorkoutOfDay)",
+     "output": "{date,class_type_name,class_type_uid,workout}"},
 ]
 
 

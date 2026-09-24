@@ -1,7 +1,26 @@
 from __future__ import annotations
 
 from pp.http import PPClient
-from pp.api.workouts import _SHARED_FRAGMENTS
+from pp.api.workouts import (
+    _F_WORKOUT_OF_DAY_PART,
+    _F_WORKOUT_MEDIA,
+    _F_WORKOUT_SCORE,
+    _F_WORKOUT_LIKE,
+    _F_WORKOUT_ATHLETE,
+    _F_WORKOUT_COMMENT,
+    _F_WORKOUT_SET,
+)
+
+# Fragment group for WorkoutOfDayPart + WorkoutScore (no unused fragments)
+_FOR_BENCHMARK = (
+    _F_WORKOUT_OF_DAY_PART
+    + _F_WORKOUT_MEDIA
+    + _F_WORKOUT_SCORE
+    + _F_WORKOUT_LIKE
+    + _F_WORKOUT_ATHLETE
+    + _F_WORKOUT_COMMENT
+    + _F_WORKOUT_SET
+)
 
 _BENCHMARK_TYPES = """
 query BenchmarkTypes {
@@ -24,7 +43,7 @@ query GetBenchmarkWorkouts($benchmarkType: String, $searchString: String) {
   __typename
 }"""
 
-_GET_BENCHMARK_WORKOUT_HISTORY = _SHARED_FRAGMENTS + """
+_GET_BENCHMARK_WORKOUT_HISTORY = _FOR_BENCHMARK + """
 query GetBenchmarkWorkoutHistory($workoutPartUid: String!) {
   benchmarkWorkoutHistory(benchmarkWorkoutHistoryInput: {workoutPartUid: $workoutPartUid}) {
     workout {
@@ -44,7 +63,7 @@ query GetBenchmarkWorkoutHistory($workoutPartUid: String!) {
   __typename
 }"""
 
-_GET_WEIGHTLIFTING_WORKOUT_HISTORY = _SHARED_FRAGMENTS + """
+_GET_WEIGHTLIFTING_WORKOUT_HISTORY = _FOR_BENCHMARK + """
 query GetWeightliftingWorkoutHistory($workoutUid: String!) {
   weightliftingWorkoutHistory(weightliftingWorkoutHistoryInput: {workoutUid: $workoutUid}) {
     workout {
