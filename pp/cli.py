@@ -241,7 +241,8 @@ def wod(
     Finds the first class type with a workout posted and renders it with
     all parts, descriptions, and score types. Defaults to today. Use
     --tomorrow / --yesterday for relative dates, or --date for a specific
-    day. Combine with --human for clean output, or omit for JSON.
+    day. Global flags go before the subcommand: `pp --human wod` for
+    human-readable output, or omit for JSON.
     """
     c = from_session()
     d = _resolve_date(date, tomorrow, yesterday)
