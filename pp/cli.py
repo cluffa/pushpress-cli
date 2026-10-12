@@ -169,7 +169,12 @@ def workouts(
     score_id: int = typer.Option(None, "--score-id", help="Score ID for workout part detail."),
     keyword: str = typer.Option(None, "--keyword", help="Search your score history."),
 ):
-    """Workouts: list types, get WOD, drill into parts, or search score history."""
+    """Workouts: list types, get WOD, drill into parts, or search score history.
+
+    Without --type-id this lists class types only; use `pp wod` to
+    auto-discover the WOD. FOR_WEIGHT scores keep reps in primaryScore and the
+    load in secondaryScore; pp adds explicit `weight` and `reps` keys to them.
+    """
     c = from_session()
     from datetime import date as dt
     d = date or dt.today().isoformat()
@@ -183,6 +188,12 @@ def workouts(
         _emit(ctx, workoutapi.annotate_for_weight(workoutapi.workout_of_day(c, d, type_id)))
     else:
         _emit(ctx, workoutapi.workout_types(c, d))
+        # stderr keeps stdout parseable JSON for agents
+        typer.echo(
+            f"TIP: use `pp wod --date {d}` to auto-discover the WOD, "
+            "or pass --type-id <uid> from the list above.",
+            err=True,
+        )
 
 
 # ── wod ───────────────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ def test_workouts_types_list(tmp_path, monkeypatch):
     result = runner.invoke(app, ["workouts", "--date", "2026-07-17"])
     assert result.exit_code == 0
     assert json.loads(result.stdout)["data"]["workoutTypes"][0]["name"] == "CrossFit"
+    assert "pp wod" in result.stderr
 
 
 @respx.mock
