@@ -12,14 +12,30 @@ _MISSING = object()
 
 
 def _get_path(obj, path):
-    """Resolve a dotted path (e.g. "location.name") inside a dict."""
-    cur = obj
-    for part in path.split("."):
-        if isinstance(cur, dict) and part in cur:
-            cur = cur[part]
-        else:
+    """Resolve a dotted path (e.g. "location.name", "scores.primaryScore").
+
+    Path segments map over lists, so "scores.primaryScore" collects that key
+    from every item in ``scores``.
+    """
+    return _resolve(obj, path.split("."))
+
+
+def _resolve(cur, parts):
+    if not parts:
+        return cur
+    part, rest = parts[0], parts[1:]
+    if isinstance(cur, dict):
+        if part not in cur:
             return _MISSING
-    return cur
+        return _resolve(cur[part], rest)
+    if isinstance(cur, list):
+        out = []
+        for item in cur:
+            v = _resolve(item, parts)
+            if v is not _MISSING:
+                out.append(v)
+        return out if out else _MISSING
+    return _MISSING
 
 
 def _has_any(obj, fields) -> bool:
@@ -34,13 +50,17 @@ def _unwrap(obj):
     """Strip a GraphQL envelope: {"data": {"<alias>": payload}} -> payload.
 
     When ``data`` holds several aliases, the ``data`` dict itself is returned.
+    A null ``data`` unwraps to None.
     """
-    if isinstance(obj, dict) and isinstance(obj.get("data"), dict):
+    if isinstance(obj, dict) and "data" in obj:
         inner = obj["data"]
-        keys = [k for k in inner if k != "__typename"]
-        if len(keys) == 1:
-            return inner[keys[0]]
-        return inner
+        if inner is None:
+            return None
+        if isinstance(inner, dict):
+            keys = [k for k in inner if k != "__typename"]
+            if len(keys) == 1:
+                return inner[keys[0]]
+            return inner
     return obj
 
 
@@ -67,25 +87,31 @@ def select_fields(obj, fields):
     """Project ``obj`` down to ``fields`` (top-level keys or dotted paths).
 
     GraphQL responses are unwrapped automatically, so ``--fields firstName``
-    works on ``{"data": {"profile": {...}}}``. Raises UsageError instead of
-    returning an empty result when none of the fields exist.
+    works on ``{"data": {"profile": {...}}}``. Raises UsageError when any
+    requested field is unknown. GraphQL error payloads
+    (``{"data": null, "errors": [...]}``) and null payloads pass through
+    unchanged instead of being masked by a usage error.
     """
     if not fields:
         return obj
     if not isinstance(obj, (dict, list)):
         return obj
-    if _has_any(obj, fields):
-        return _project(obj, fields)
-    unwrapped = _unwrap(obj)
-    if unwrapped == [] or obj == []:
+    if isinstance(obj, dict) and obj.get("errors") and not isinstance(obj.get("data"), dict):
+        # Upstream GraphQL error: don't let field selection hide it.
+        return obj
+    target = obj if _has_any(obj, fields) else _unwrap(obj)
+    if target is None:
+        return None
+    if target == []:
         return []
-    if _has_any(unwrapped, fields):
-        return _project(unwrapped, fields)
-    raise UsageError(
-        f"none of the requested fields found: {', '.join(fields)}",
-        detail=f"available fields: {', '.join(_available_keys(unwrapped))}",
-        hint="use dotted paths for nested keys, e.g. --fields location.name",
-    )
+    missing = [f for f in fields if not _has_any(target, [f])]
+    if missing:
+        raise UsageError(
+            f"unknown field(s): {', '.join(missing)}",
+            detail=f"available fields: {', '.join(_available_keys(target))}",
+            hint="use dotted paths for nested keys, e.g. --fields location.name",
+        )
+    return _project(target, fields)
 
 
 def emit(data, *, human=False, ndjson=False, fields=None, human_renderer=None):
