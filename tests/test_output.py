@@ -40,6 +40,29 @@ def test_select_fields_missing_raises():
     assert "firstName" in ei.value.detail
 
 
+def test_select_fields_partial_unknown_raises():
+    # Unknown fields are an error even when other fields match (per README).
+    with pytest.raises(UsageError) as ei:
+        select_fields({"a": 1, "b": 2}, ["a", "typo"])
+    assert "typo" in str(ei.value)
+
+
+def test_select_fields_graphql_errors_pass_through():
+    # An upstream GraphQL error payload must not be masked by a usage error.
+    payload = {"data": None, "errors": [{"message": "Fragment X is never used"}]}
+    assert select_fields(payload, ["title"]) == payload
+
+
+def test_select_fields_null_payload_returns_none():
+    assert select_fields({"data": {"workoutOfDay": None}}, ["title"]) is None
+    assert select_fields({"data": None}, ["title"]) is None
+
+
+def test_select_fields_dotted_path_through_list():
+    obj = {"data": {"workoutGetScores": {"scores": [{"primaryScore": 5}, {"primaryScore": 3}]}}}
+    assert select_fields(obj, ["scores.primaryScore"]) == {"scores.primaryScore": [5, 3]}
+
+
 def test_emit_json_default(capsys):
     emit({"x": 1})
     out = capsys.readouterr().out
