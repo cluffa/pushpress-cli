@@ -142,7 +142,13 @@ def schedule(
     date: str = typer.Option(None, "--date", help="Date YYYY-MM-DD (default today)."),
     class_id: str = typer.Option(None, "--class-id", help="Get detail for one class."),
 ):
-    """Class schedule for a date, or detail for a single class."""
+    """Class schedule for a date, or detail for a single class.
+
+    Note: startTime/endTime come back from the PushPress API as gym-local
+    wall-clock times even though they carry a "Z" suffix (a 6 AM class reads
+    "...T06:00:00.000Z"). Do not convert them from UTC; read the clock time
+    as-is in the gym's timezone (see `pp --fields timezone gym`).
+    """
     c = from_session()
     if class_id:
         _emit(ctx, scheduleapi.class_detail(c, class_id))
