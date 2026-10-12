@@ -169,11 +169,12 @@ def workouts(
     d = date or dt.today().isoformat()
 
     if keyword is not None:
-        _emit(ctx, workoutapi.score_history(c, keyword))
+        _emit(ctx, workoutapi.annotate_for_weight(workoutapi.score_history(c, keyword)))
     elif part_id:
-        _emit(ctx, workoutapi.workout_part(c, part_id, workout_uid=workout_uid, score_id=score_id))
+        _emit(ctx, workoutapi.annotate_for_weight(
+            workoutapi.workout_part(c, part_id, workout_uid=workout_uid, score_id=score_id)))
     elif type_id:
-        _emit(ctx, workoutapi.workout_of_day(c, d, type_id))
+        _emit(ctx, workoutapi.annotate_for_weight(workoutapi.workout_of_day(c, d, type_id)))
     else:
         _emit(ctx, workoutapi.workout_types(c, d))
 
@@ -246,7 +247,7 @@ def wod(
     """
     c = from_session()
     d = _resolve_date(date, tomorrow, yesterday)
-    result = workoutapi.wod_auto(c, d)
+    result = workoutapi.annotate_for_weight(workoutapi.wod_auto(c, d))
     _emit(ctx, result, human_renderer=_render_wod)
 
 
@@ -263,10 +264,16 @@ def scores(
     workout_uid: str = typer.Option(None, "--workout-uid"),
     class_type_id: float = typer.Option(None, "--class-type-id"),
 ):
-    """Workout leaderboard or personal score history."""
+    """Workout leaderboard or personal score history.
+
+    FOR_WEIGHT scores keep reps in primaryScore and the load in
+    secondaryScore. History entries (which carry scoreType) get explicit
+    `weight` and `reps` keys; leaderboard rows have no scoreType, so read
+    secondaryScore as the weight for FOR_WEIGHT parts.
+    """
     c = from_session()
     if keyword is not None:
-        _emit(ctx, scoreapi.history(c, keyword))
+        _emit(ctx, workoutapi.annotate_for_weight(scoreapi.history(c, keyword)))
     elif part_uid and date:
         _emit(ctx, scoreapi.leaderboard(c, part_uid, date, workout_uid=workout_uid, class_type_id=class_type_id))
     else:
@@ -282,12 +289,16 @@ def benchmarks(
     part_uid: str = typer.Option(None, "--part-uid", help="Benchmark part UUID for history + best result."),
     workout_uid: str = typer.Option(None, "--workout-uid", help="Workout UUID for weightlifting history."),
 ):
-    """Benchmark workouts: list categories, find workouts, view history."""
+    """Benchmark workouts: list categories, find workouts, view history.
+
+    For FOR_WEIGHT workouts, results gain explicit `weight` (secondaryScore)
+    and `reps` (primaryScore) keys.
+    """
     c = from_session()
     if part_uid:
-        _emit(ctx, benchmarkapi.benchmark_history(c, part_uid))
+        _emit(ctx, workoutapi.annotate_for_weight(benchmarkapi.benchmark_history(c, part_uid)))
     elif workout_uid:
-        _emit(ctx, benchmarkapi.weightlifting_history(c, workout_uid))
+        _emit(ctx, workoutapi.annotate_for_weight(benchmarkapi.weightlifting_history(c, workout_uid)))
     elif type or search:
         _emit(ctx, benchmarkapi.benchmark_workouts(c, benchmark_type=type, search=search))
     else:
