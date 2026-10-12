@@ -76,20 +76,8 @@ _F_WORKOUT_SET = """
 fragment WorkoutSet on LogScoreSets { primaryScore secondaryScore __typename }
 """
 
-# Fragment groups for each query — only includes fragments transitively used
-_FOR_WORKOUT_OF_DAY = (
-    _F_WORKOUT_OF_DAY
-    + _F_WORKOUT_OF_DAY_PART
-    + _F_WORKOUT_MEDIA
-    + _F_WORKOUT_SCORE
-    + _F_WORKOUT_LIKE
-    + _F_WORKOUT_ATHLETE
-    + _F_WORKOUT_COMMENT
-    + _F_WORKOUT_SET
-)
-
-_FOR_WORKOUT_PART = _FOR_WORKOUT_OF_DAY  # Same transitive closure
-
+# Fragment groups for each query — only includes fragments transitively used.
+# The API rejects documents that define unused fragments.
 _FOR_WORKOUT_SCORES = (
     _F_WORKOUT_SCORE
     + _F_WORKOUT_LIKE
@@ -98,9 +86,14 @@ _FOR_WORKOUT_SCORES = (
     + _F_WORKOUT_SET
 )
 
-# Public: shared fragment block for use by other modules (e.g. benchmarks.py)
-# Includes the full transitive closure for WorkoutOfDayPart + WorkoutScore.
-WORKOUT_SHARED_FRAGMENTS = _FOR_WORKOUT_OF_DAY
+# WorkoutOfDayPart + WorkoutScore closure (no WorkoutOfDay)
+_FOR_WORKOUT_PART = _F_WORKOUT_OF_DAY_PART + _F_WORKOUT_MEDIA + _FOR_WORKOUT_SCORES
+
+_FOR_WORKOUT_OF_DAY = _F_WORKOUT_OF_DAY + _FOR_WORKOUT_PART
+
+# Public: shared fragment block for queries that spread WorkoutOfDayPart and
+# WorkoutScore (e.g. benchmarks.py). Deliberately excludes WorkoutOfDay.
+WORKOUT_SHARED_FRAGMENTS = _FOR_WORKOUT_PART
 
 _GET_WORKOUT_TYPES = """
 query GetWorkoutTypes($classDate: String!) {
@@ -147,6 +140,51 @@ query UserScoreHistory($keyword: String!) {
   __typename
 }
 """
+
+
+_SCORE_KEYS = ("score", "bestResult", "workingMax", "results", "scores", "sets")
+
+
+def _is_for_weight(score_type) -> bool:
+    return isinstance(score_type, str) and score_type.strip().upper().replace(" ", "_") == "FOR_WEIGHT"
+
+
+def _tag_weight(node) -> None:
+    """Add weight/reps aliases to score-shaped dicts under a FOR_WEIGHT context."""
+    if isinstance(node, list):
+        for x in node:
+            _tag_weight(x)
+        return
+    if not isinstance(node, dict):
+        return
+    if "primaryScore" in node and "secondaryScore" in node:
+        node.setdefault("weight", node["secondaryScore"])
+        node.setdefault("reps", node["primaryScore"])
+    for k in _SCORE_KEYS:
+        if k in node:
+            _tag_weight(node[k])
+
+
+def annotate_for_weight(resp):
+    """FOR_WEIGHT scores store reps in primaryScore and the load in secondaryScore.
+
+    Walks a response and, for every FOR_WEIGHT context (a part, history entry,
+    or benchmark history whose ``workout.scoreType`` is FOR_WEIGHT), adds
+    explicit ``weight`` (= secondaryScore) and ``reps`` (= primaryScore) keys to
+    each score. Raw fields are left untouched. Mutates and returns ``resp``.
+    """
+    if isinstance(resp, list):
+        for x in resp:
+            annotate_for_weight(x)
+    elif isinstance(resp, dict):
+        workout = resp.get("workout")
+        if _is_for_weight(resp.get("scoreType")) or (
+            isinstance(workout, dict) and _is_for_weight(workout.get("scoreType"))
+        ):
+            _tag_weight(resp)
+        for v in resp.values():
+            annotate_for_weight(v)
+    return resp
 
 
 def workout_types(c: PPClient, date: str) -> dict:

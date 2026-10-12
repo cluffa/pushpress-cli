@@ -14,10 +14,11 @@ DEFAULT_BASE = "https://api.pushpress.com"
 class PPClient:
     def __init__(self, token: str, base_url: str | None = None, timeout: float = 30.0):
         self.base_url = (base_url or os.environ.get("PP_API_BASE") or DEFAULT_BASE).rstrip("/")
-        self._client = httpx.Client(
-            timeout=timeout,
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-        )
+        headers = {"Accept": "application/json"}
+        # An empty "Bearer " header makes /v2/auth/login reject the request (401).
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        self._client = httpx.Client(timeout=timeout, headers=headers)
 
     def _request(self, method: str, path: str, **kw) -> Any:
         url = self.base_url + path

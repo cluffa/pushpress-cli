@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+_FOR_WEIGHT_NOTE = ("FOR_WEIGHT scores: primaryScore is reps, secondaryScore is the weight; "
+                    "pp adds explicit weight/reps keys where scoreType is known.")
+
 _CATALOG = [
     {"command": "attendance", "summary": "Class attendance stats (week, month, year, all-time).",
      "args": [], "endpoint": "POST /v2/graph/graphql (GetAttendanceStats)",
@@ -38,7 +41,8 @@ _CATALOG = [
     {"command": "schedule", "summary": "Class schedule for a date, or detail for a single class.",
      "args": [{"name": "--date", "required": False}, {"name": "--class-id", "required": False}],
      "endpoint": "POST /v2/graph/graphql (GetClasses / GetClass)",
-     "output": "classes[{uuid,title,classType,spotsAvailable,startTime,endTime,location,mainCoach}] or getClass[{uuid,title,price,description,registrations,type}]"},
+     "output": "classes[{uuid,title,classType,spotsAvailable,startTime,endTime,location,mainCoach}] or getClass[{uuid,title,price,description,registrations,type}]",
+     "notes": "startTime/endTime are gym-local wall-clock times despite the 'Z' suffix; do not convert from UTC."},
     {"command": "raw", "summary": "Raw GET passthrough (read-only).",
      "args": [{"name": "method", "required": True}, {"name": "path", "required": True},
               {"name": "--query", "required": False}],
@@ -48,12 +52,14 @@ _CATALOG = [
               {"name": "--keyword", "required": False}, {"name": "--workout-uid", "required": False},
               {"name": "--class-type-id", "required": False}],
      "endpoint": "POST /v2/graph/graphql (GetWorkoutScores / UserScoreHistory)",
-     "output": "workoutGetScores{scores[{id,primaryScore,...}]} or scoreHistory[{title,primaryScore,...}]"},
+     "output": "workoutGetScores{scores[{id,primaryScore,...}]} or scoreHistory[{title,primaryScore,...}]",
+     "notes": _FOR_WEIGHT_NOTE},
     {"command": "benchmarks", "summary": "Benchmark workouts: list categories, find workouts, view history.",
      "args": [{"name": "--type", "required": False}, {"name": "--search", "required": False},
               {"name": "--part-uid", "required": False}, {"name": "--workout-uid", "required": False}],
      "endpoint": "POST /v2/graph/graphql (BenchmarkTypes / GetBenchmarkWorkouts / GetBenchmarkWorkoutHistory / GetWeightliftingWorkoutHistory)",
-     "output": "benchmarkTypes[{key,displayName}] or benchmarks[{workoutUid,title}] or benchmarkWorkoutHistory[{workout{...},bestResult{...},results[{...}]}] or weightliftingWorkoutHistory[{workout{...},workingMax{...},results[{...}]}]"},
+     "output": "benchmarkTypes[{key,displayName}] or benchmarks[{workoutUid,title}] or benchmarkWorkoutHistory[{workout{...},bestResult{...},results[{...}]}] or weightliftingWorkoutHistory[{workout{...},workingMax{...},results[{...}]}]",
+     "notes": _FOR_WEIGHT_NOTE},
     {"command": "events", "summary": "Events calendar.",
      "args": [{"name": "--start-date", "required": False}, {"name": "--end-date", "required": False}],
      "endpoint": "POST /v2/graph/graphql (GetEvents)",
@@ -66,7 +72,8 @@ _CATALOG = [
               {"name": "--part-id", "required": False}, {"name": "--workout-uid", "required": False},
               {"name": "--score-id", "required": False}, {"name": "--keyword", "required": False}],
      "endpoint": "POST /v2/graph/graphql (GetWorkoutTypes / GetWorkoutOfDay / GetWorkoutPart / GetWorkoutScores / UserScoreHistory)",
-     "output": "workoutTypes[{name,uid,...}] or workoutOfDay{title,parts[{title,scoreType,...}]} or workoutPart{title,scoreType,...} or workoutGetScores{scores[{id,primaryScore,...}]} or scoreHistory[{title,primaryScore,...}]"},
+     "output": "workoutTypes[{name,uid,...}] or workoutOfDay{title,parts[{title,scoreType,...}]} or workoutPart{title,scoreType,...} or workoutGetScores{scores[{id,primaryScore,...}]} or scoreHistory[{title,primaryScore,...}]",
+     "notes": "Without --type-id only class types are listed; use `pp wod` to auto-discover the WOD. " + _FOR_WEIGHT_NOTE},
     {"command": "wod", "summary": "Auto-discover class type and show today's WOD.",
      "args": [{"name": "--date", "required": False}, {"name": "--tomorrow", "required": False},
               {"name": "--yesterday", "required": False}],
