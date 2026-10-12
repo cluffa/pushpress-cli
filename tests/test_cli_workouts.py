@@ -24,6 +24,7 @@ def test_workouts_types_list(tmp_path, monkeypatch):
     result = runner.invoke(app, ["workouts", "--date", "2026-07-17"])
     assert result.exit_code == 0
     assert json.loads(result.stdout)["data"]["workoutTypes"][0]["name"] == "CrossFit"
+    assert "pp wod" in result.stderr
 
 
 @respx.mock
@@ -225,3 +226,51 @@ def test_wod_command_no_types(tmp_path, monkeypatch):
     assert result.exit_code == 0
     data = json.loads(result.stdout)
     assert data["workout"] is None
+
+
+@respx.mock
+def test_profile_fields_unwraps_graphql(tmp_path, monkeypatch):
+    monkeypatch.setenv("PP_CONFIG_DIR", str(tmp_path))
+    (tmp_path / "session.json").write_text(json.dumps({
+        "clientUuid": "client_1", "userUuid": "usr_1", "accessToken": "tok"
+    }))
+    respx.post(f"{BASE}/v2/graph/graphql").mock(
+        return_value=httpx.Response(200, json={"data": {"profile": {"firstName": "A", "lastName": "B", "email": "e"}}})
+    )
+    result = runner.invoke(app, ["--fields", "firstName,lastName", "profile"])
+    assert result.exit_code == 0
+    assert json.loads(result.stdout) == {"firstName": "A", "lastName": "B"}
+
+
+@respx.mock
+def test_workouts_part_for_weight_adds_weight_and_reps(tmp_path, monkeypatch):
+    monkeypatch.setenv("PP_CONFIG_DIR", str(tmp_path))
+    (tmp_path / "session.json").write_text(json.dumps({
+        "clientUuid": "client_1", "userUuid": "usr_1", "accessToken": "tok"
+    }))
+    part = {"title": "Back Squat", "scoreType": "FOR_WEIGHT",
+            "score": {"primaryScore": "5", "secondaryScore": "225",
+                      "sets": [{"primaryScore": "5", "secondaryScore": "205"}]}}
+    respx.post(f"{BASE}/v2/graph/graphql").mock(
+        return_value=httpx.Response(200, json={"data": {"workoutPart": part}})
+    )
+    result = runner.invoke(app, ["workouts", "--part-id", "p1"])
+    assert result.exit_code == 0
+    score = json.loads(result.stdout)["data"]["workoutPart"]["score"]
+    assert score["weight"] == "225" and score["reps"] == "5"
+    assert score["sets"][0]["weight"] == "205"
+    assert score["primaryScore"] == "5"  # raw fields untouched
+
+
+@respx.mock
+def test_workouts_part_non_weight_untouched(tmp_path, monkeypatch):
+    monkeypatch.setenv("PP_CONFIG_DIR", str(tmp_path))
+    (tmp_path / "session.json").write_text(json.dumps({
+        "clientUuid": "client_1", "userUuid": "usr_1", "accessToken": "tok"
+    }))
+    part = {"title": "Fran", "scoreType": "FOR_TIME", "score": {"primaryScore": "300", "secondaryScore": None}}
+    respx.post(f"{BASE}/v2/graph/graphql").mock(
+        return_value=httpx.Response(200, json={"data": {"workoutPart": part}})
+    )
+    result = runner.invoke(app, ["workouts", "--part-id", "p1"])
+    assert "weight" not in json.loads(result.stdout)["data"]["workoutPart"]["score"]

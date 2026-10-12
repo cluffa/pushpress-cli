@@ -92,8 +92,10 @@ Passwords and tokens are never printed. A stored session is written to
 - **`--human`** — human-readable rendering (falls back to JSON where no
   dedicated renderer exists).
 - **`--ndjson`** — for list payloads, stream one JSON object per line.
-- **`--fields a,b,c`** — project output down to a set of top-level fields
-  (applied per item for lists).
+- **`--fields a,b,c`** — project output down to a set of fields (applied per
+  item for lists). GraphQL envelopes are unwrapped, so
+  `pp --fields firstName,lastName profile` filters `data.profile`; dotted paths
+  such as `location.name` reach nested keys. Unknown fields are an error, never `{}`.
 - **Errors** are structured JSON on stderr:
   `{"error", "code", "detail", "hint"}` (`detail`/`hint` omitted when N/A).
 

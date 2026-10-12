@@ -51,7 +51,7 @@ def main(
     ),
     human: bool = typer.Option(False, "--human", help="Human-readable output instead of JSON."),
     ndjson: bool = typer.Option(False, "--ndjson", help="Stream lists as newline-delimited JSON."),
-    fields: str = typer.Option(None, "--fields", help="Comma-separated fields to keep."),
+    fields: str = typer.Option(None, "--fields", help="Comma-separated fields to keep; dotted paths allowed, GraphQL data is unwrapped."),
 ):
     """pp — agent-first CLI for the PushPress Members API."""
     ctx.obj = OutputOpts(
@@ -142,7 +142,13 @@ def schedule(
     date: str = typer.Option(None, "--date", help="Date YYYY-MM-DD (default today)."),
     class_id: str = typer.Option(None, "--class-id", help="Get detail for one class."),
 ):
-    """Class schedule for a date, or detail for a single class."""
+    """Class schedule for a date, or detail for a single class.
+
+    Note: startTime/endTime come back from the PushPress API as gym-local
+    wall-clock times even though they carry a "Z" suffix (a 6 AM class reads
+    "...T06:00:00.000Z"). Do not convert them from UTC; read the clock time
+    as-is in the gym's timezone (see `pp --fields timezone gym`).
+    """
     c = from_session()
     if class_id:
         _emit(ctx, scheduleapi.class_detail(c, class_id))
@@ -163,19 +169,31 @@ def workouts(
     score_id: int = typer.Option(None, "--score-id", help="Score ID for workout part detail."),
     keyword: str = typer.Option(None, "--keyword", help="Search your score history."),
 ):
-    """Workouts: list types, get WOD, drill into parts, or search score history."""
+    """Workouts: list types, get WOD, drill into parts, or search score history.
+
+    Without --type-id this lists class types only; use `pp wod` to
+    auto-discover the WOD. FOR_WEIGHT scores keep reps in primaryScore and the
+    load in secondaryScore; pp adds explicit `weight` and `reps` keys to them.
+    """
     c = from_session()
     from datetime import date as dt
     d = date or dt.today().isoformat()
 
     if keyword is not None:
-        _emit(ctx, workoutapi.score_history(c, keyword))
+        _emit(ctx, workoutapi.annotate_for_weight(workoutapi.score_history(c, keyword)))
     elif part_id:
-        _emit(ctx, workoutapi.workout_part(c, part_id, workout_uid=workout_uid, score_id=score_id))
+        _emit(ctx, workoutapi.annotate_for_weight(
+            workoutapi.workout_part(c, part_id, workout_uid=workout_uid, score_id=score_id)))
     elif type_id:
-        _emit(ctx, workoutapi.workout_of_day(c, d, type_id))
+        _emit(ctx, workoutapi.annotate_for_weight(workoutapi.workout_of_day(c, d, type_id)))
     else:
         _emit(ctx, workoutapi.workout_types(c, d))
+        # stderr keeps stdout parseable JSON for agents
+        typer.echo(
+            f"TIP: use `pp wod --date {d}` to auto-discover the WOD, "
+            "or pass --type-id <uid> from the list above.",
+            err=True,
+        )
 
 
 # ── wod ───────────────────────────────────────────────────────────────────
@@ -246,7 +264,7 @@ def wod(
     """
     c = from_session()
     d = _resolve_date(date, tomorrow, yesterday)
-    result = workoutapi.wod_auto(c, d)
+    result = workoutapi.annotate_for_weight(workoutapi.wod_auto(c, d))
     _emit(ctx, result, human_renderer=_render_wod)
 
 
@@ -263,10 +281,16 @@ def scores(
     workout_uid: str = typer.Option(None, "--workout-uid"),
     class_type_id: float = typer.Option(None, "--class-type-id"),
 ):
-    """Workout leaderboard or personal score history."""
+    """Workout leaderboard or personal score history.
+
+    FOR_WEIGHT scores keep reps in primaryScore and the load in
+    secondaryScore. History entries (which carry scoreType) get explicit
+    `weight` and `reps` keys; leaderboard rows have no scoreType, so read
+    secondaryScore as the weight for FOR_WEIGHT parts.
+    """
     c = from_session()
     if keyword is not None:
-        _emit(ctx, scoreapi.history(c, keyword))
+        _emit(ctx, workoutapi.annotate_for_weight(scoreapi.history(c, keyword)))
     elif part_uid and date:
         _emit(ctx, scoreapi.leaderboard(c, part_uid, date, workout_uid=workout_uid, class_type_id=class_type_id))
     else:
@@ -282,12 +306,16 @@ def benchmarks(
     part_uid: str = typer.Option(None, "--part-uid", help="Benchmark part UUID for history + best result."),
     workout_uid: str = typer.Option(None, "--workout-uid", help="Workout UUID for weightlifting history."),
 ):
-    """Benchmark workouts: list categories, find workouts, view history."""
+    """Benchmark workouts: list categories, find workouts, view history.
+
+    For FOR_WEIGHT workouts, results gain explicit `weight` (secondaryScore)
+    and `reps` (primaryScore) keys.
+    """
     c = from_session()
     if part_uid:
-        _emit(ctx, benchmarkapi.benchmark_history(c, part_uid))
+        _emit(ctx, workoutapi.annotate_for_weight(benchmarkapi.benchmark_history(c, part_uid)))
     elif workout_uid:
-        _emit(ctx, benchmarkapi.weightlifting_history(c, workout_uid))
+        _emit(ctx, workoutapi.annotate_for_weight(benchmarkapi.weightlifting_history(c, workout_uid)))
     elif type or search:
         _emit(ctx, benchmarkapi.benchmark_workouts(c, benchmark_type=type, search=search))
     else:
