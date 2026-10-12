@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+_FOR_WEIGHT_NOTE = ("FOR_WEIGHT scores: primaryScore is reps, secondaryScore is the weight; "
+                    "pp adds explicit weight/reps keys where scoreType is known.")
+
 _CATALOG = [
     {"command": "attendance", "summary": "Class attendance stats (week, month, year, all-time).",
      "args": [], "endpoint": "POST /v2/graph/graphql (GetAttendanceStats)",
@@ -48,12 +51,14 @@ _CATALOG = [
               {"name": "--keyword", "required": False}, {"name": "--workout-uid", "required": False},
               {"name": "--class-type-id", "required": False}],
      "endpoint": "POST /v2/graph/graphql (GetWorkoutScores / UserScoreHistory)",
-     "output": "workoutGetScores{scores[{id,primaryScore,...}]} or scoreHistory[{title,primaryScore,...}]"},
+     "output": "workoutGetScores{scores[{id,primaryScore,...}]} or scoreHistory[{title,primaryScore,...}]",
+     "notes": _FOR_WEIGHT_NOTE},
     {"command": "benchmarks", "summary": "Benchmark workouts: list categories, find workouts, view history.",
      "args": [{"name": "--type", "required": False}, {"name": "--search", "required": False},
               {"name": "--part-uid", "required": False}, {"name": "--workout-uid", "required": False}],
      "endpoint": "POST /v2/graph/graphql (BenchmarkTypes / GetBenchmarkWorkouts / GetBenchmarkWorkoutHistory / GetWeightliftingWorkoutHistory)",
-     "output": "benchmarkTypes[{key,displayName}] or benchmarks[{workoutUid,title}] or benchmarkWorkoutHistory[{workout{...},bestResult{...},results[{...}]}] or weightliftingWorkoutHistory[{workout{...},workingMax{...},results[{...}]}]"},
+     "output": "benchmarkTypes[{key,displayName}] or benchmarks[{workoutUid,title}] or benchmarkWorkoutHistory[{workout{...},bestResult{...},results[{...}]}] or weightliftingWorkoutHistory[{workout{...},workingMax{...},results[{...}]}]",
+     "notes": _FOR_WEIGHT_NOTE},
     {"command": "events", "summary": "Events calendar.",
      "args": [{"name": "--start-date", "required": False}, {"name": "--end-date", "required": False}],
      "endpoint": "POST /v2/graph/graphql (GetEvents)",
