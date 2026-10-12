@@ -1,26 +1,10 @@
 from __future__ import annotations
 
 from pp.http import PPClient
-from pp.api.workouts import (
-    _F_WORKOUT_OF_DAY_PART,
-    _F_WORKOUT_MEDIA,
-    _F_WORKOUT_SCORE,
-    _F_WORKOUT_LIKE,
-    _F_WORKOUT_ATHLETE,
-    _F_WORKOUT_COMMENT,
-    _F_WORKOUT_SET,
-)
+from pp.api.workouts import WORKOUT_SHARED_FRAGMENTS
 
 # Fragment group for WorkoutOfDayPart + WorkoutScore (no unused fragments)
-_FOR_BENCHMARK = (
-    _F_WORKOUT_OF_DAY_PART
-    + _F_WORKOUT_MEDIA
-    + _F_WORKOUT_SCORE
-    + _F_WORKOUT_LIKE
-    + _F_WORKOUT_ATHLETE
-    + _F_WORKOUT_COMMENT
-    + _F_WORKOUT_SET
-)
+_FOR_BENCHMARK = WORKOUT_SHARED_FRAGMENTS
 
 _BENCHMARK_TYPES = """
 query BenchmarkTypes {

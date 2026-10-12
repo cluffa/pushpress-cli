@@ -76,20 +76,8 @@ _F_WORKOUT_SET = """
 fragment WorkoutSet on LogScoreSets { primaryScore secondaryScore __typename }
 """
 
-# Fragment groups for each query — only includes fragments transitively used
-_FOR_WORKOUT_OF_DAY = (
-    _F_WORKOUT_OF_DAY
-    + _F_WORKOUT_OF_DAY_PART
-    + _F_WORKOUT_MEDIA
-    + _F_WORKOUT_SCORE
-    + _F_WORKOUT_LIKE
-    + _F_WORKOUT_ATHLETE
-    + _F_WORKOUT_COMMENT
-    + _F_WORKOUT_SET
-)
-
-_FOR_WORKOUT_PART = _FOR_WORKOUT_OF_DAY  # Same transitive closure
-
+# Fragment groups for each query — only includes fragments transitively used.
+# The API rejects documents that define unused fragments.
 _FOR_WORKOUT_SCORES = (
     _F_WORKOUT_SCORE
     + _F_WORKOUT_LIKE
@@ -98,9 +86,14 @@ _FOR_WORKOUT_SCORES = (
     + _F_WORKOUT_SET
 )
 
-# Public: shared fragment block for use by other modules (e.g. benchmarks.py)
-# Includes the full transitive closure for WorkoutOfDayPart + WorkoutScore.
-WORKOUT_SHARED_FRAGMENTS = _FOR_WORKOUT_OF_DAY
+# WorkoutOfDayPart + WorkoutScore closure (no WorkoutOfDay)
+_FOR_WORKOUT_PART = _F_WORKOUT_OF_DAY_PART + _F_WORKOUT_MEDIA + _FOR_WORKOUT_SCORES
+
+_FOR_WORKOUT_OF_DAY = _F_WORKOUT_OF_DAY + _FOR_WORKOUT_PART
+
+# Public: shared fragment block for queries that spread WorkoutOfDayPart and
+# WorkoutScore (e.g. benchmarks.py). Deliberately excludes WorkoutOfDay.
+WORKOUT_SHARED_FRAGMENTS = _FOR_WORKOUT_PART
 
 _GET_WORKOUT_TYPES = """
 query GetWorkoutTypes($classDate: String!) {
