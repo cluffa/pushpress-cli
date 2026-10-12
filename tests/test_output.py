@@ -1,7 +1,9 @@
 import json
 
+import pytest
+
 from pp.output import emit, emit_error, select_fields
-from pp.errors import AuthError
+from pp.errors import AuthError, UsageError
 
 
 def test_select_fields_dict():
@@ -11,6 +13,31 @@ def test_select_fields_dict():
 def test_select_fields_list():
     got = select_fields([{"a": 1, "b": 2}, {"a": 3, "b": 4}], ["a"])
     assert got == [{"a": 1}, {"a": 3}]
+
+
+def test_select_fields_unwraps_graphql_envelope():
+    resp = {"data": {"profile": {"firstName": "A", "lastName": "B", "email": "x"}, "__typename": "Query"}}
+    assert select_fields(resp, ["firstName", "lastName"]) == {"firstName": "A", "lastName": "B"}
+
+
+def test_select_fields_unwraps_graphql_list():
+    resp = {"data": {"classes": [{"title": "CF", "uuid": "1"}, {"title": "Oly", "uuid": "2"}]}}
+    assert select_fields(resp, ["title"]) == [{"title": "CF"}, {"title": "Oly"}]
+
+
+def test_select_fields_dotted_path():
+    obj = {"location": {"name": "Main"}, "title": "CF"}
+    assert select_fields(obj, ["location.name"]) == {"location.name": "Main"}
+
+
+def test_select_fields_empty_graphql_list():
+    assert select_fields({"data": {"classes": []}}, ["title"]) == []
+
+
+def test_select_fields_missing_raises():
+    with pytest.raises(UsageError) as ei:
+        select_fields({"data": {"profile": {"firstName": "A"}}}, ["nope"])
+    assert "firstName" in ei.value.detail
 
 
 def test_emit_json_default(capsys):

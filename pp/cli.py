@@ -51,7 +51,7 @@ def main(
     ),
     human: bool = typer.Option(False, "--human", help="Human-readable output instead of JSON."),
     ndjson: bool = typer.Option(False, "--ndjson", help="Stream lists as newline-delimited JSON."),
-    fields: str = typer.Option(None, "--fields", help="Comma-separated fields to keep."),
+    fields: str = typer.Option(None, "--fields", help="Comma-separated fields to keep; dotted paths allowed, GraphQL data is unwrapped."),
 ):
     """pp — agent-first CLI for the PushPress Members API."""
     ctx.obj = OutputOpts(
