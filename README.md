@@ -1,6 +1,6 @@
 # pp — PushPress Members API CLI
 
-`pp` is an agent-first, read-only, JSON-first command-line client for the
+`pp` is an agent-first, JSON-first command-line client for the
 **PushPress Members API** (`api.pushpress.com`) — the backend behind the
 PushPress member apps (the Flutter mobile app `com.pushpress.memberportal` and
 the `members.pushpress.com` web build).
@@ -133,6 +133,9 @@ Run `pp describe` for the machine-readable capability catalog, or
 | `benchmarks` | Benchmark categories, workouts, and history. |
 | `attendance` | Check-in / attendance stats (week/month/year/all-time). |
 | `appointments` | Upcoming reservations, types, packages, credits, history. |
+| `reserve` | Reserve a class by UUID (`pp schedule` lists them). |
+| `cancel-reservation` | Cancel one of your class reservations by UUID. |
+| `checkin` | Check in to one of your class reservations by UUID. |
 | `events` | Events calendar. |
 | `preorders` | Merchandise / product preorders. |
 | `feed` | Gym social feed activity. |
@@ -168,7 +171,9 @@ pp raw GET /v2/client/client/<uuid>/features
 | `PP_CONFIG_DIR` | Config dir (default `~/.config/pp`, or `$XDG_CONFIG_HOME/pp`). |
 | `PP_API_BASE` | API base URL (default `https://api.pushpress.com`). |
 
-`pp` performs **no mutations** — `pp raw` rejects any method other than `GET`.
+`pp raw` rejects any method other than `GET`. The only writes in `pp` are
+your own class reservations and check-ins: `reserve`, `cancel-reservation`,
+and `checkin`.
 
 ---
 
@@ -305,6 +310,9 @@ argument — a common PushPress convention), grouped by command:
 | `appointments --credits` | `AppointmentCreditCounts` → `getUserAppointmentCreditsCount` | `userUuid` |
 | `appointments --history` | `AppointmentHistory` → `getUserAppointmentHistory(getUserAppointmentHistoryInput)` | `userUuid` |
 | `preorders` | `GetPreorders` → `getPreorders(getPreordersInput)` | `userUuid` |
+| `reserve` | `CreateReservation` → `createReservation(createReservationInput)` | `clientUserUuid`, `calendarItemUuid`, `subscriptionUuid` |
+| `cancel-reservation` | `CancelReservation` → `cancelReservation(cancelReservationInput)` | `reservationId` |
+| `checkin` | `CheckIn` → `checkin(checkinInput)` | `reservationId` |
 
 The full query documents (with field selections and fragments like
 `ProfileFragment` and `CoachProfile`) live in
@@ -389,7 +397,8 @@ pp/
 ## Legal & scope
 
 Built for **interoperability and access to your own data**. It talks to your
-account with your own credentials and performs **read-only** requests. Do not use
+account with your own credentials; reads are unrestricted and the only writes
+are your own class reservations and check-ins. Do not use
 it to access accounts or data you are not authorized to, and respect PushPress's
 Terms of Service. This project is unofficial and unaffiliated with PushPress; the
 API is undocumented and may change or break at any time.

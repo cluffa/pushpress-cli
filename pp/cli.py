@@ -18,6 +18,7 @@ from pp.api import graphql as gqlapi
 from pp.api import preorders as preorderapi
 from pp.api import profile as profileapi
 from pp.api import raw as rawapi
+from pp.api import reservations as reservationapi
 from pp.api import schedule as scheduleapi
 from pp.api import scores as scoreapi
 from pp.api import social as socialapi
@@ -341,6 +342,23 @@ def _client_uuid(override: str | None) -> str:
     return uuid
 
 
+def _user_uuid() -> str:
+    # Try session file first; fall back to resolving from token.
+    try:
+        uuid = session.load().user_uuid
+        if uuid:
+            return uuid
+    except AuthError:
+        pass
+    token = session.current_token()
+    result = auth.verify(PPClient(token=token), token)
+    payload = result.get("payload", {}) if isinstance(result, dict) else {}
+    uuid = payload.get("sub", "")
+    if not uuid:
+        raise AuthError("could not resolve user UUID", hint="run: pp login")
+    return uuid
+
+
 @app.command()
 @command
 def gym(ctx: typer.Context, client_uuid: str = typer.Option(None, "--client-uuid")):
@@ -446,6 +464,44 @@ def appointments(
         _emit(ctx, apptapi.appointment_history(c, session.load().user_uuid))
     else:
         _emit(ctx, apptapi.upcoming_reservations(c))
+
+
+@app.command()
+@command
+def reserve(
+    ctx: typer.Context,
+    class_id: str = typer.Option(..., "--class-id", help="Class UUID from `pp schedule`."),
+):
+    """Reserve a class (createReservation).
+
+    The booking identity (clientUserUuid + subscriptionUuid) is resolved
+    from your profile, so the only input needed is the class UUID.
+    """
+    c = from_session()
+    client_user_uuid, subscription_uuid = reservationapi.booking_identity(
+        c, _client_uuid(None), _user_uuid()
+    )
+    _emit(ctx, reservationapi.create_reservation(c, client_user_uuid, class_id, subscription_uuid))
+
+
+@app.command()
+@command
+def cancel_reservation(
+    ctx: typer.Context,
+    reservation_id: str = typer.Option(..., "--reservation-id", help="Reservation UUID from `pp appointments`."),
+):
+    """Cancel a class reservation (cancelReservation)."""
+    _emit(ctx, reservationapi.cancel_reservation(from_session(), reservation_id))
+
+
+@app.command()
+@command
+def checkin(
+    ctx: typer.Context,
+    reservation_id: str = typer.Option(..., "--reservation-id", help="Reservation UUID from `pp appointments`."),
+):
+    """Check in to a class reservation (checkin)."""
+    _emit(ctx, reservationapi.checkin_reservation(from_session(), reservation_id))
 
 
 @app.command()
