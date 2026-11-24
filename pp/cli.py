@@ -132,7 +132,7 @@ def profile(ctx: typer.Context):
     """User profile with memberships and subscriptions."""
     c = from_session()
     client_uuid = _client_uuid(None)
-    user_uuid = session.load().user_uuid
+    user_uuid = _user_uuid()
     _emit(ctx, profileapi.get_profile(c, client_uuid, user_uuid))
 
 
@@ -326,9 +326,9 @@ def benchmarks(
 def _client_uuid(override: str | None) -> str:
     if override:
         return override
-    # Try session file first; fall back to resolving from token.
+    # Try session file first (healing empty UUIDs); fall back to the token.
     try:
-        uuid = session.load().client_uuid
+        uuid = session.resolve().client_uuid
         if uuid:
             return uuid
     except AuthError:
@@ -343,9 +343,9 @@ def _client_uuid(override: str | None) -> str:
 
 
 def _user_uuid() -> str:
-    # Try session file first; fall back to resolving from token.
+    # Try session file first (healing empty UUIDs); fall back to the token.
     try:
-        uuid = session.load().user_uuid
+        uuid = session.resolve().user_uuid
         if uuid:
             return uuid
     except AuthError:
@@ -439,7 +439,7 @@ def attendance(ctx: typer.Context):
     """Class attendance stats (week, month, year, all-time)."""
     c = from_session()
     client_uuid = _client_uuid(None)
-    user_uuid = session.load().user_uuid
+    user_uuid = _user_uuid()
     _emit(ctx, attendanceapi.get_attendance_stats(c, client_uuid, user_uuid))
 
 
@@ -459,9 +459,9 @@ def appointments(
     elif packages:
         _emit(ctx, apptapi.appointment_packages(c))
     elif credits:
-        _emit(ctx, apptapi.appointment_credit_counts(c, session.load().user_uuid))
+        _emit(ctx, apptapi.appointment_credit_counts(c, _user_uuid()))
     elif history:
-        _emit(ctx, apptapi.appointment_history(c, session.load().user_uuid))
+        _emit(ctx, apptapi.appointment_history(c, _user_uuid()))
     else:
         _emit(ctx, apptapi.upcoming_reservations(c))
 
@@ -524,7 +524,7 @@ def events(
 def preorders(ctx: typer.Context):
     """Merchandise / product preorders."""
     c = from_session()
-    user_uuid = session.load().user_uuid
+    user_uuid = _user_uuid()
     _emit(ctx, preorderapi.get_preorders(c, user_uuid))
 
 

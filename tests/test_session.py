@@ -1,11 +1,15 @@
 import os
 import stat
 
+import httpx
 import pytest
+import respx
 
 from pp import config, session
 from pp.models import Session
 from pp.errors import AuthError
+
+BASE = "https://api.pushpress.com"
 
 ACCESS_DATA = {
     "clientUuid": "client_1",
@@ -56,3 +60,41 @@ def test_clear(tmp_config):
     session.clear()
     with pytest.raises(AuthError):
         session.load()
+
+
+@respx.mock
+def test_resolve_heals_empty_ids_and_persists(tmp_config):
+    session.save(Session.from_access_data(dict(ACCESS_DATA, clientUuid="", userUuid="")))
+    respx.get(f"{BASE}/v2/auth/verify/eyJ.a.b").mock(
+        return_value=httpx.Response(
+            200,
+            json={"isValid": True, "payload": {"clientUuid": "client_test_gym", "sub": "usr_test_member"}},
+        )
+    )
+    healed = session.resolve()
+    assert healed.client_uuid == "client_test_gym"
+    assert healed.user_uuid == "usr_test_member"
+    # Persisted: a fresh load sees the healed IDs.
+    assert session.load().client_uuid == "client_test_gym"
+    assert session.load().user_uuid == "usr_test_member"
+
+
+@respx.mock
+def test_resolve_skips_verify_when_ids_present(tmp_config):
+    session.save(Session.from_access_data(ACCESS_DATA))
+    route = respx.get(f"{BASE}/v2/auth/verify/eyJ.a.b").mock(
+        return_value=httpx.Response(200, json={"isValid": True, "payload": {}})
+    )
+    sess = session.resolve()
+    assert sess.client_uuid == "client_1"
+    assert sess.user_uuid == "usr_1"
+    assert not route.called
+
+
+@respx.mock
+def test_resolve_returns_stored_when_verify_fails(tmp_config):
+    session.save(Session.from_access_data(dict(ACCESS_DATA, clientUuid="", userUuid="")))
+    respx.get(f"{BASE}/v2/auth/verify/eyJ.a.b").mock(return_value=httpx.Response(401, json={}))
+    sess = session.resolve()
+    assert sess.client_uuid == ""
+    assert sess.user_uuid == ""

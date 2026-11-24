@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @dataclass
@@ -39,9 +39,11 @@ class Session:
 
     @property
     def is_expired(self) -> bool:
-        raw = (self.token_expiration or "").replace("Z", "")
+        raw = (self.token_expiration or "").replace("Z", "+00:00")
         try:
             exp = datetime.fromisoformat(raw)
         except ValueError:
             return True
-        return exp <= datetime.now()
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        return exp <= datetime.now(timezone.utc)
