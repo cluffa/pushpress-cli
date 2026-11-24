@@ -39,7 +39,7 @@ Two login paths converge on the same bearer JWT.
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| `POST` | `/v2/auth/login` | `{ "email", "password" }` | Access data incl. `accessToken` (the JWT), `clientUuid`, `userUuid`, `company`, `subdomain`, `tokenExpiration`. |
+| `POST` | `/v2/auth/login` | `{ "username", "password" }` (username = account email) | Top-level `accessToken`/`refreshToken` plus a `clients` list; each entry carries `clientUuid`, `userUuid`, `company`, `subdomain`, `role`, `active` and its own `accessToken`. Identity lives on the `clients` entry the issued token belongs to — there is no top-level `clientUuid`/`userUuid` and no `tokenExpiration` (derive expiry from the token's `exp` claim, e.g. via verify). |
 
 ### Mobile (passwordless OTP)
 
