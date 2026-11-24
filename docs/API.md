@@ -9,7 +9,8 @@ Everything here was recovered from the public member apps (Flutter mobile app +
 owns. All values are **placeholders** — no tokens, keys, UUIDs, or personal data.
 
 > **Unofficial & undocumented.** Not produced or endorsed by PushPress. The API
-> can change without notice. Read-only, own-account use only.
+> can change without notice. Own-account use only; the only writes are your
+> own class reservations and check-ins.
 
 ## Conventions
 
@@ -154,6 +155,9 @@ Content-Type: application/json
 | `AppointmentCreditCounts` | `getUserAppointmentCreditsCount` | `userUuid` | `appointments --credits` |
 | `AppointmentHistory` | `getUserAppointmentHistory(getUserAppointmentHistoryInput)` | `userUuid` | `appointments --history` |
 | `GetPreorders` | `getPreorders(getPreordersInput)` | `userUuid` | `preorders` |
+| `CreateReservation` | `createReservation(createReservationInput)` | `clientUserUuid`, `calendarItemUuid`, `subscriptionUuid`, `source` (nullable) | `reserve` |
+| `CancelReservation` | `cancelReservation(cancelReservationInput)` | `reservationId` (the reservation `uuid`) | `cancel-reservation` |
+| `CheckIn` | `checkin(checkinInput)` | `reservationId` (the reservation `uuid`), `source` (nullable) | `checkin` |
 
 The full query documents — with field selections and fragments (`ProfileFragment`,
 `CoachProfile`, …) — live in [`pp/api/`](../pp/api/), one module per command. Those
@@ -162,16 +166,27 @@ fields returned.
 
 ### Additional operations seen in the app (not wrapped by `pp`)
 
-Recovered from the app but outside this read-only client's scope — mostly writes
+Recovered from the app but not wrapped by `pp` — mostly appointment writes
 (booking, cancellation, likes) and areas `pp` doesn't cover yet:
 
 `AuthenticateUser`, `GetBadges`/`GetBadge`, `GetBadgeProgress`, `GetBadgeMembers`,
 `ListMemberRanks`, `ListRankSystems`, `GetPlans`, `QuerySubscriptionCancelRequests`,
 `GetCompanyStatus`, `SyncCheckins`, `bookUserAppointment`, `checkinUserAppointment`,
-`cancelAppointmentSchedule`, `createReservation`/`cancelReservation`,
+`cancelAppointmentSchedule`,
 `createSubscription`/`cancelMembership`, `getAppointmentTypeSchedule`,
 `getInvoicePreviewForAppointmentPackage`, `getFilteredClasses`,
 `createWorkoutAthlete`, `createWorkoutLike`.
+
+Notes on the wrapped writes (all recovered from the web build's `main.dart.js`
+and verified live):
+
+- `createReservation` returns the new `Registration` (`{uuid}`); the member's
+  `clientUserUuid` and `subscriptionUuid` come from `getProfile`.
+- Class check-in is the `checkin` mutation above — distinct from
+  `checkinUserAppointment`, which is for staff-booked appointments and takes
+  `appointmentUserCheckinInput {appointmentScheduleUuid}`.
+- Early check-in is accepted by the API (a check-in ~16h before class start
+  succeeded in live verification).
 
 ## 4. How this map was produced
 
